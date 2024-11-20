@@ -3,32 +3,41 @@ require("dotenv").config();
 const path = require("path");
 const express = require("express");
 const mongoose = require("mongoose");
-const cookiePaser = require("cookie-parser");
+const cookieParser = require("cookie-parser");
 
 const Blog = require("./models/blog");
-// In your other file where you want to use the User model
-const User = require('./models/user');
-
+const User = require("./models/user");
 
 const userRoute = require("./routes/user");
 const blogRoute = require("./routes/blog");
 
 const {
-  checkForAuthenticationCookie,
+  checkForAuthenticationCookie
 } = require("./middlewares/authentication");
 
 const app = express();
 const PORT = process.env.PORT || 8000;
-//"mongodb://localhost:27017/blogify"
+
+mongoose.set("strictQuery", false);
+
+// mongoose
+//   .connect(process.env.MONGO_URL)
+//   .then(() => console.log("MongoDB Connected"))
+//   .catch((err) => console.error("MongoDB connection error:", err));
+
 mongoose
-  .connect(process.env.MONGO_URL,)
-  .then((e) => console.log("MongoDB Connected"));
+  .connect(process.env.MONGO_URL, {
+    useNewUrlParser: true, // Avoids deprecation warnings for URL string parsing
+    useUnifiedTopology: true // Uses the new Server Discover and Monitoring engine
+  })
+  .then(() => console.log("MongoDB Connected Succssfully!"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 app.set("view engine", "ejs");
 app.set("views", path.resolve("./views"));
 
 app.use(express.urlencoded({ extended: false }));
-app.use(cookiePaser());
+app.use(cookieParser());
 app.use(checkForAuthenticationCookie("token"));
 app.use(express.static(path.resolve("./public")));
 
@@ -36,37 +45,22 @@ app.get("/", async (req, res) => {
   const allBlogs = await Blog.find({});
   res.render("home", {
     user: req.user,
-    blogs: allBlogs,
+    blogs: allBlogs
   });
 });
-
-app.get("/nav", async (req, res) => {
-  try {
-    if (!req.user || !req.user._id) {
-      return res.status(400).send("User not authenticated");
-    }
-
-    const user = await User.findById(req.user._id);
-
-    if (!user) {
-      return res.status(404).send("User not found");
-    }
-
-    console.log("User object:", user); // Log the user object to check its properties
-
-    res.render("nav", { user });
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    res.status(500).send("Server error");
-  }
-});
-
-
 
 app.get("/about", (req, res) => {
   res.render("about");
 });
 
+app.get("/signup", (req, res) => {
+  res.render("signup", { user: req.user || null });
+});
+
+app.use((req, res, next) => {
+  res.locals.user = req.user || null; // or your user-fetching logic
+  next();
+});
 
 app.use("/user", userRoute);
 app.use("/blog", blogRoute);
