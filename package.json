@@ -7,7 +7,7 @@
     "start": "node app",
     "dev": "nodemon run dev"
   },
-  "author": "",
+  "author": "SiriSettyVenkatesh",
   "engines": {
     "node": ">=16.0.0"
   },
